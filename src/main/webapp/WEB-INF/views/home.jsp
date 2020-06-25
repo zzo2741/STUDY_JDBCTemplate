@@ -15,6 +15,9 @@
 </script>
 </head>
 <body>
+<!--
+Spring-JDBC를 구현하기 위한 절차(게시판 작업 후...)
+-->
 	<div class="container">
 		<h2>스프링 MVC 시작하기</h2>
 		<h3>Spring 답변형 비회원제 게시판 제작</h3>
