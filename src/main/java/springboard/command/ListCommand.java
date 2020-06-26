@@ -54,6 +54,19 @@ public class ListCommand implements BbsCommandImpl
 			// 전체 게시물의 갯수에서 하나씩 차감하면서 가상 번호 부여
 			virtualNum = totalRecordCount--;
 			row.setVirtualNum(virtualNum);
+			// 답변글에 대한 리스트 처리(re.gif이미지를 제목에 삽입)
+			String reSpace = "";
+			// 해당 게시물의 indent가 0보다 크다면(답변글 이라면)...
+			if (row.getBindent() > 0)
+			{
+				// indent의 크기만큼 공백(&nbsp;)를 추가해준다.
+				for (int i = 0; i < row.getBindent(); i++)
+				{
+					reSpace += "&nbsp;&nbsp;";
+				}
+				// reply이미지를 추가해준다.
+				row.setTitle(reSpace + "<img src = '../images/re3.gif'>" + row.getTitle());
+			}
 		}
 		// model객체에 출력리스트 저장
 		model.addAttribute("listRows", listRows);

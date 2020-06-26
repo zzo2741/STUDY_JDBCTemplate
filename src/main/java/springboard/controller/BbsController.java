@@ -11,7 +11,12 @@ import org.springframework.web.bind.annotation.RequestMethod;
 
 import model.JdbcTemplateConst;
 import springboard.command.BbsCommandImpl;
+import springboard.command.DeleteActionCommand;
+import springboard.command.EditActionCommand;
+import springboard.command.EditCommand;
 import springboard.command.ListCommand;
+import springboard.command.ReplyActionCommand;
+import springboard.command.ReplyCommand;
 import springboard.command.ViewCommand;
 import springboard.command.WriteActionCommand;
 import springboard.model.JDBCTemplateDAO;
@@ -121,8 +126,67 @@ public class BbsController
 		} else
 		{
 			System.out.println("검증완료");
+			if (mode.equals("edit"))
+			{
+				// 수정이면 수정폼으로 이동한다.
+				model.addAttribute("req", req);
+				command = new EditCommand();
+				command.execute(model);
+				modePage = "07Board/edit";
+			} else if (mode.equals("delete"))
+			{
+				// 패스워드 검증 후 문제가 없다면 즉시 삭제처리한다.
+				model.addAttribute("req", req);
+				command = new DeleteActionCommand();
+				command.execute(model);
+				/*
+				 * 컨트롤러에서 뷰의 경로를 반활할 때 아래와 같이 redirect하게 되면 list.do?nowPage=10
+				 * 이와 같이 URL을 자동으로 조립해서 로케이션 시켜준다.
+				 */
+				model.addAttribute("nowPage", req.getParameter("nowPage"));
+				modePage = "redirect:list.do";
+			}
 		}
 		return modePage;
 	}
 
+	@RequestMapping("/board/editAction.do")
+	public String editAction(HttpServletRequest req, Model model, SpringBbsVO springBbsVO)
+	{
+		model.addAttribute("req", req);
+		model.addAttribute("springBbsVO", springBbsVO);
+		command = new EditActionCommand();
+		command.execute(model);
+		/*
+		 * 게시물 수정 후 상세보기 페이지로 돌아가기 위해서는 idx값이 반드시 필요하다. 이동시 쿼리스트링 형태로 redirect하지 않고 model객체에 필요한
+		 * 파라미터를 저장하면 자동으로 URL을 조립하여 View를 호출해준다.
+		 */
+		model.addAttribute("idx", req.getParameter("idx"));
+		model.addAttribute("nowPage", req.getParameter("nowPage"));
+		return "redirect:view.do";
+	}
+
+	@RequestMapping("/board/reply.do")
+	public String reply(HttpServletRequest req, Model model)
+	{
+		System.out.println("reply() 메소드 호출");
+		model.addAttribute("req", req);
+		command = new ReplyCommand();
+		command.execute(model);
+		model.addAttribute("idx", req.getParameter("idx"));
+		return "07Board/reply";
+	}
+
+	@RequestMapping("/board/replyAction.do")
+	public String replyAction(HttpServletRequest req, Model model, SpringBbsVO springBbsVO)
+	{
+		// 작성된 내용은 커맨드 객체를 통해 한 번에 폼값 받음
+		model.addAttribute("springBbsVO", springBbsVO);
+		model.addAttribute("req", req);
+		command = new ReplyActionCommand();
+		command.execute(model);
+		model.addAttribute("nowPage", req.getParameter("nowPage"));
+		// 답글쓰기 완료 후 리스트 페이지 이동
+		return "redirect:list.do";
+	}
 }

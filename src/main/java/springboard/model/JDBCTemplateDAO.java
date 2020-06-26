@@ -35,12 +35,23 @@ public class JDBCTemplateDAO
 	private String BOARD_COUNT = "SELECT COUNT(*) FROM springboard ";
 	private String BOARD_LIST = " SELECT * FROM springboard ";
 	private String HITS_UPDATE = " UPDATE springboard SET hits = hits + 1 WHERE idx = ? ";
-
+	private String BOARD_DELETE = " DELETE FROM springboard WHERE idx = ? AND pass = ? ";
+	private String REPLY_STEP_UPDATE = " UPDATE springboard SET bstep = bstep + 1 WHERE bgroup = ? AND bstep > ? ";
+	/*
+	 * 해당 게시판에서 패스워드는 변경 대상이 아니라 검증의 대상으로만 사용됨. 따라서 set절이 아니라 WHERE절에 삽입된다.
+	 */
+	private String BOARD_EDIT = " UPDATE springboard SET name = ?, title = ?, contents = ? WHERE idx = ? AND pass = ?";
 	/*
 	 * 답변형 게시판에서 원본글인 경우에는 idx(일련번호)와 bgroup(그룹번호)가 반드시 일치해야 한다.
 	 * 또한 nextVal은 한문장에서 여러번 사용하더라도 같은 시퀀스를 반환한다.
 	 */
 	private final String BOARE_WIRTE = " INSERT INTO springboard ( idx, name, title, contents, hits, bgroup, bstep, bindent, pass) VALUES (springboard_seq.nextval, ?, ?, ?, 0, springboard_seq.nextval, 0, 0, ? )";
+	/*
+	 * 원본글의 경우 idx와 bgroup은 동일한 값을 입력함. 답변글의 경우 원본글의 group번호를 그대로 가져와서 입력함.
+	 * idx는 시퀀스를 통해 bgroup은 원본글과 동일하게 입력함.
+	 */
+	private final String REPLY_WIRTE = " INSERT INTO springboard ( idx, name, title, contents, pass, bgroup, bstep, bindent) VALUES (springboard_seq.nextval, ?, ?, ?, ?, ?, ?, ? )";
+
 	// 멤버 변수
 	JdbcTemplate template;
 
@@ -76,7 +87,8 @@ public class JDBCTemplateDAO
 		{
 			BOARD_LIST += " WHERE " + map.get("Column") + " LIKE '%" + map.get("Word") + "%' ";
 		}
-		BOARD_LIST += " ORDER BY idx DESC ";
+		// BOARD_LIST += " ORDER BY idx DESC "; -> 답변글 사용하지 않을 경우
+		BOARD_LIST += " ORDER BY bgroup DESC, bstep ASC "; // -> 답변글 적용시...
 		/*
 		 * query메소드의 반환타입은 List계열의 컬렉션이므로 제네릭부분만 우리가 필요한 DTO객체로 대체하면 된다.
 		 * 나머지는 RowMapper객체가 모두 알아서 처리해준다.
@@ -152,11 +164,92 @@ public class JDBCTemplateDAO
 		try
 		{
 			SpringBbsVO vo = template.queryForObject(PASSWORD_SELECT, new BeanPropertyRowMapper<SpringBbsVO>(SpringBbsVO.class));
+			/*
+			 * idx와 pass에 해당하는 게시물이 정상적으로 가져와졌을 때는 해당 idx값을 반환값으로 사용한다.
+			 */
 			retNum = vo.getIdx();
 		} catch (Exception e)
 		{
+			/*
+			 * 만약 일치하지 않아 예외가 발생되면 0을 반환한다. 일련번호는 시퀀스를 사용하므로 항상 0보다는 큰 값을 가지게 된다.
+			 */
 			System.out.println("password() 예외발생");
 		}
 		return retNum;
+	}
+
+	// 수정처리
+	public void edit(final SpringBbsVO vo)
+	{
+		/*
+		 * 매개변수 vo객체를 아래 익명클래스 내부에서 사용해야 하므로 반드시 final을 붙여줘야 한다.
+		 */
+		template.update(BOARD_EDIT, new PreparedStatementSetter()
+		{
+			@Override
+			public void setValues(PreparedStatement ps) throws SQLException
+			{
+				ps.setString(1, vo.getName());
+				ps.setString(2, vo.getTitle());
+				ps.setString(3, vo.getContents());
+				ps.setInt(4, vo.getIdx());
+				ps.setString(5, vo.getPass());
+			}
+		});
+	}
+
+	// 삭제처리
+	public void delete(final String idx, final String pass)
+	{
+		template.update(BOARD_DELETE, new PreparedStatementSetter()
+		{
+
+			@Override
+			public void setValues(PreparedStatement ps) throws SQLException
+			{
+				ps.setString(1, idx);
+				ps.setString(2, pass);
+			}
+		});
+	}
+
+	// 답변글쓰기
+	public void reply(final SpringBbsVO vo)
+	{
+		// 답변 글쓰기 전 레코드 업데이트
+		replyPrevUpdate(vo.getBgroup(), vo.getBstep());
+
+		/*
+		 * 답변글인 경우 원본글의 step + 1, indent + 1 처리하여 입력한다.
+		 */
+		template.update(REPLY_WIRTE, new PreparedStatementSetter()
+		{
+			@Override
+			public void setValues(PreparedStatement ps) throws SQLException
+			{
+				ps.setString(1, vo.getName());
+				ps.setString(2, vo.getTitle());
+				ps.setString(3, vo.getContents());
+				ps.setString(4, vo.getPass());
+				ps.setInt(5, vo.getBgroup());
+				ps.setInt(6, vo.getBstep() + 1);
+				ps.setInt(7, vo.getBindent() + 1);
+			}
+		});
+	}
+
+	// 답변글 입력 전 레코드 일괄 업데이트(step을 뒤로 밀어주기 위한 로직)
+	public void replyPrevUpdate(final int strGroup, final int strStep)
+	{
+		template.update(REPLY_STEP_UPDATE, new PreparedStatementSetter()
+		{
+
+			@Override
+			public void setValues(PreparedStatement ps) throws SQLException
+			{
+				ps.setInt(1, strGroup);
+				ps.setInt(2, strStep);
+			}
+		});
 	}
 }
