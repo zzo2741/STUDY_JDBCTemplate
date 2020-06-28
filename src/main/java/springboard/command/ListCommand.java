@@ -9,6 +9,8 @@ import org.springframework.ui.Model;
 
 import springboard.model.JDBCTemplateDAO;
 import springboard.model.SpringBbsVO;
+import springboard.util.EnvFileReader;
+import springboard.util.PagingUtil;
 
 /*
  * BbsCommandImpl를 구현하였으므로 execute()메소드는 반드시 오버라이딩 해야 한다.
@@ -44,6 +46,22 @@ public class ListCommand implements BbsCommandImpl
 		}
 		// 전체 레코드 수 카운트 하기
 		int totalRecordCount = dao.getTotalCount(paramMap);
+		/////////////////////////////////////////////////////
+		// 페이지 처리 부분 start
+		// Environment객체를 이용한 외부파일 읽어오기
+		int pageSize = Integer.parseInt(EnvFileReader.getValue("SpringBbsInit.properties", "springBoard.pageSize"));
+		int blockPage = Integer.parseInt(EnvFileReader.getValue("SpringBbsInit.properties", "springBoard.blockPage"));
+		// 전체 페이지 수 계산
+		int totalPage = (int) Math.ceil((double) totalRecordCount / pageSize);
+		// 현재페이지 번호, 첫 진입이라면 무조건 1페이지로 지정
+		int nowPage = req.getParameter("nowPage") == null ? 1 : Integer.parseInt(req.getParameter("nowPage"));
+		int start = (nowPage - 1) * pageSize + 1;
+		int end = nowPage * pageSize;
+		paramMap.put("start", start);
+		paramMap.put("end", end);
+
+		// 페이지 처리 부분 end
+		/////////////////////////////////////////////////////
 		// 출력할 리스트 가져오기
 		ArrayList<SpringBbsVO> listRows = dao.list(paramMap);
 		// 가상번호 계산하여 부여하기
@@ -51,8 +69,11 @@ public class ListCommand implements BbsCommandImpl
 		int countNum = 0;
 		for (SpringBbsVO row : listRows)
 		{
-			// 전체 게시물의 갯수에서 하나씩 차감하면서 가상 번호 부여
+			/* 전체 게시물의 갯수에서 하나씩 차감하면서 가상 번호 부여
 			virtualNum = totalRecordCount--;
+			row.setVirtualNum(virtualNum);*/
+			// 페이지 번호 적용하면 가상번호 부여
+			virtualNum = totalRecordCount - (((nowPage - 1) * pageSize) + countNum++);
 			row.setVirtualNum(virtualNum);
 			// 답변글에 대한 리스트 처리(re.gif이미지를 제목에 삽입)
 			String reSpace = "";
@@ -69,6 +90,11 @@ public class ListCommand implements BbsCommandImpl
 			}
 		}
 		// model객체에 출력리스트 저장
+		String pagingImg = PagingUtil.pagingImg(totalRecordCount, pageSize, blockPage, nowPage,
+				req.getContextPath() + "/board/list.do?" + addQueryString);
+		model.addAttribute("pagingImg", pagingImg);
+		model.addAttribute("totalPage", totalPage);
+		model.addAttribute("nowPage", nowPage);
 		model.addAttribute("listRows", listRows);
 		// JDBCTemplate에서는 자원반납을 하지 않는다.
 		// dao.close();

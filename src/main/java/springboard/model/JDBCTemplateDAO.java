@@ -80,20 +80,21 @@ public class JDBCTemplateDAO
 		return template.queryForObject(BOARD_COUNT, Integer.class);
 	}
 
-	// 게시판 리스트(페이지 처리 X)
+	// 게시판 리스트(페이지 처리 O)
 	public ArrayList<SpringBbsVO> list(Map<String, Object> map)
 	{
+
+		int start = Integer.parseInt(map.get("start").toString());
+		int end = Integer.parseInt(map.get("end").toString());
+
+		String sql = "" + "SELECT * FROM (" + "    SELECT Tb.*, rownum rNum FROM (" + "        SELECT * FROM springboard ";
 		if (map.get("Word") != null)
 		{
-			BOARD_LIST += " WHERE " + map.get("Column") + " LIKE '%" + map.get("Word") + "%' ";
+			sql += " WHERE " + map.get("Column") + " " + " LIKE '%" + map.get("Word") + "%' ";
 		}
-		// BOARD_LIST += " ORDER BY idx DESC "; -> 답변글 사용하지 않을 경우
-		BOARD_LIST += " ORDER BY bgroup DESC, bstep ASC "; // -> 답변글 적용시...
-		/*
-		 * query메소드의 반환타입은 List계열의 컬렉션이므로 제네릭부분만 우리가 필요한 DTO객체로 대체하면 된다.
-		 * 나머지는 RowMapper객체가 모두 알아서 처리해준다.
-		 */
-		return (ArrayList<SpringBbsVO>) template.query(BOARD_LIST, new BeanPropertyRowMapper<SpringBbsVO>(SpringBbsVO.class));
+		sql += " ORDER BY bgroup DESC, bstep ASC" + "    ) Tb" + ")" + " WHERE rNum BETWEEN " + start + " and " + end;
+
+		return (ArrayList<SpringBbsVO>) template.query(sql, new BeanPropertyRowMapper<SpringBbsVO>(SpringBbsVO.class));
 	}
 
 	// 글쓰리 처리

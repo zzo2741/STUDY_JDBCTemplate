@@ -77,7 +77,12 @@
 				</c:otherwise>
 			</c:choose>
 		</table>
+		<!-- 페이지 번호 -->
+		<table border="1" width="90%">
+			<tr>
+				<td align="center">${pagingImg }</td>
+			</tr>
+		</table>
 	</div>
-
 </body>
 </html>
