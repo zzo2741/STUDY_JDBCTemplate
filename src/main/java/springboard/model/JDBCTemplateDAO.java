@@ -10,8 +10,7 @@ import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementCreator;
 import org.springframework.jdbc.core.PreparedStatementSetter;
-
-import model.JdbcTemplateConst;
+import org.springframework.stereotype.Repository;
 
 /*
  * JdbcTemplate 관련 주요메소드
@@ -30,6 +29,8 @@ import model.JdbcTemplateConst;
  * - int update(String sql, Object[] args)
  * 		: 인파라미터가 있는 update/delete/insert 쿼리문을 처리할 때 사용함.
  */
+// DAO(Model) 역할의 클래스임을 명시하는 어노테이션
+@Repository
 public class JDBCTemplateDAO
 {
 	private String BOARD_COUNT = "SELECT COUNT(*) FROM springboard ";
@@ -54,6 +55,14 @@ public class JDBCTemplateDAO
 
 	// 멤버 변수
 	JdbcTemplate template;
+	// setter메소드 생성(Spring-JDBC 2차버전)
+	/*
+	 * servlet-context.xml에서 생성된 dao빈을 자동으로 주입받기 위해 생성한 setter메소드
+	 */
+	public void setTemplate(JdbcTemplate template)
+	{
+		this.template = template;
+	}
 
 	public JDBCTemplateDAO()
 	{
@@ -61,7 +70,9 @@ public class JDBCTemplateDAO
 		 * 컨트롤러에서 @Autowired를 통해 자동주입 받았던 빈을 정적변수인 JdbcTemplateConst.template을 통해 가져온다.
 		 * 즉, DB연결정보를 웹어플리케이션 어디서든 사용할 수 있다.
 		 */
-		this.template = JdbcTemplateConst.template;
+		//
+		// Spring-JDBC 1차 버전에서 사용함. (new로 DAO객체 생성)
+		//this.template = JdbcTemplateConst.template;
 		System.out.println("JDBCTemplateDAO() 생성자 호출");
 	}
 

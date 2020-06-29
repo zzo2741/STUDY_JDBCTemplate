@@ -4,13 +4,25 @@ import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 import org.springframework.ui.Model;
 
 import springboard.model.JDBCTemplateDAO;
 import springboard.model.SpringBbsVO;
 
+@Service
 public class EditCommand implements BbsCommandImpl
 {
+	JDBCTemplateDAO dao;
+
+	@Autowired
+	public void setDao(JDBCTemplateDAO dao)
+	{
+		this.dao = dao;
+		System.out.println("JDBCTemplateDAO자동주입(Edit)");
+	}
+
 	@Override
 	public void execute(Model model)
 	{
@@ -18,7 +30,7 @@ public class EditCommand implements BbsCommandImpl
 		Map<String, Object> paramMap = model.asMap();
 		HttpServletRequest req = (HttpServletRequest) paramMap.get("req");
 		String idx = req.getParameter("idx");
-		JDBCTemplateDAO dao = new JDBCTemplateDAO();
+		//JDBCTemplateDAO dao = new JDBCTemplateDAO();
 		SpringBbsVO vo = dao.view(idx);
 		model.addAttribute("viewRow", vo);
 		dao.close();
